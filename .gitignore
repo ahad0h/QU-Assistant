@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+backend/pdfs/
+backend/rag_index/
+.env
+.DS_Store
