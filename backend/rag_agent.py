@@ -1,6 +1,6 @@
 """
 RAG Agent - Qassim University College of Computer
-Agentic RAG pipeline using FAISS + SentenceTransformers + Groq LLM.
+Agentic RAG pipeline using FAISS + FastEmbed + Groq LLM.
 """
 
 import os, re, json, pickle
@@ -8,7 +8,7 @@ import numpy as np
 import requests as req
 import faiss
 from pypdf import PdfReader
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 from groq import Groq
 from bs4 import BeautifulSoup
 
@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 # ============================================================
 PDF_FOLDER       = os.getenv("PDF_FOLDER", "./pdfs")
 INDEX_DIR        = os.getenv("INDEX_DIR", "./rag_index")
-EMBED_MODEL_NAME = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")
+EMBED_MODEL_NAME = os.getenv("EMBED_MODEL", "BAAI/bge-small-en-v1.5")
 LLM_MODEL        = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
 TOP_K            = 5
 CHUNK_SIZE       = 900
@@ -182,8 +182,9 @@ def build_corpus(folder):
                 out.append({"text": ch, "source": fname, "page": page_num, **meta})
     return out
 
-def embed_texts(model, texts, batch_size=32):
-    emb = model.encode(texts, batch_size=batch_size, show_progress_bar=False, convert_to_numpy=True)
+def embed_texts(texts):
+    embeddings = list(emb_model.embed(texts))
+    emb = np.array(embeddings).astype("float32")
     norms = np.linalg.norm(emb, axis=1, keepdims=True) + 1e-12
     return (emb / norms).astype("float32")
 
@@ -215,7 +216,8 @@ def init_index(force_rebuild: bool = False):
         raise RuntimeError("GROQ_API_KEY not set in environment variables")
     groq_client = Groq(api_key=api_key)
 
-    emb_model = SentenceTransformer(EMBED_MODEL_NAME)
+    print("Loading embedding model...")
+    emb_model = TextEmbedding(EMBED_MODEL_NAME)
 
     index_path  = os.path.join(INDEX_DIR, "index.faiss")
     corpus_path = os.path.join(INDEX_DIR, "corpus.pkl")
@@ -230,7 +232,7 @@ def init_index(force_rebuild: bool = False):
     scrape_qu_pages(PDF_FOLDER)
     corpus = build_corpus(PDF_FOLDER)
     print("  total chunks: " + str(len(corpus)))
-    embeddings = embed_texts(emb_model, [c["text"] for c in corpus])
+    embeddings = embed_texts([c["text"] for c in corpus])
     faiss_index = build_faiss_index(embeddings)
     save_index(faiss_index, corpus)
     print("Index ready - " + str(len(corpus)) + " chunks")
@@ -287,7 +289,7 @@ def retrieval_agent(query_info, top_k=TOP_K):
     level         = query_info.get("level", "all")
     topic         = query_info.get("topic", "general")
 
-    q_emb = embed_texts(emb_model, [refined_query], batch_size=1)
+    q_emb = embed_texts([refined_query])
     scores, idxs = faiss_index.search(q_emb, top_k * 4)
     candidates = [(corpus[idx], float(sc)) for sc, idx in zip(scores[0], idxs[0]) if idx != -1]
 
@@ -313,7 +315,7 @@ def response_generation_agent(context, question, query_info, history=None, stude
     history_ctx = ""
     if history:
         for h in history[-4:]:
-            user_line = "User: " + h.get('q', '')
+            user_line  = "User: " + h.get('q', '')
             logos_line = "\u0644\u0648\u062c\u0648\u0633: " + h.get('a', '')
             history_ctx += user_line + "\n" + logos_line + "\n"
 
@@ -330,11 +332,11 @@ def response_generation_agent(context, question, query_info, history=None, stude
         "- Keep answers concise (3-4 sentences max)\n\n"
         "CRITICAL RULES:\n"
         "1. Answer ONLY using the CONTEXT below\n"
-        "2. If the CONTEXT doesn't contain the answer, say (in the SAME language as the QUESTION) that this question is outside the scope of the academic service, and that you can only answer questions related to courses and regulations of the College of Computer at Qassim University\n"
+        "2. If the CONTEXT doesn't contain the answer, say (in the SAME language as the QUESTION) that this question is outside the scope of the academic service\n"
         "3. NEVER use your general knowledge if the answer is not in the CONTEXT\n"
         "4. Cite sources as [1], [2], etc.\n\n"
         "LANGUAGE RULE:\n"
-        "Detect the language the QUESTION is written in and respond ONLY in that exact language, including rule 2's fallback message.\n"
+        "Detect the language the QUESTION is written in and respond ONLY in that exact language.\n"
         "Never mix languages in your answer.\n\n"
         + student_section
         + history_section
