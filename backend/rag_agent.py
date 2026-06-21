@@ -1,14 +1,6 @@
 """
-RAG Agent — Qassim University College of Computer
+RAG Agent - Qassim University College of Computer
 Agentic RAG pipeline using FAISS + SentenceTransformers + Groq LLM.
-
-يتم تحميل المفاتيح من متغيرات البيئة:
-  - GROQ_API_KEY
-
-استخدام:
-    from rag_agent import init_index, agentic_pipeline, PDF_METADATA, PDF_FOLDER
-    init_index()                       # يبني/يحمّل الفهرس مرة واحدة
-    result = agentic_pipeline("سؤالك", department="CS", level="bachelor")
 """
 
 import os, re, json, pickle
@@ -68,20 +60,20 @@ PDF_METADATA = {
 }
 
 QU_PAGES = [
-    ("https://www.qu.edu.sa/about/", "عن الجامعة"),
-    ("https://www.qu.edu.sa/university-president/cv/", "رئيس الجامعة"),
-    ("https://www.qu.edu.sa/colleges/coc/about/", "عن كلية الحاسب"),
-    ("https://www.qu.edu.sa/colleges/coc/departments/coc-2/", "قسم علوم الحاسب"),
-    ("https://www.qu.edu.sa/colleges/coc/departments/coc-3/", "قسم تقنية المعلومات"),
-    ("https://www.qu.edu.sa/colleges/coc/departments/coc-1/", "قسم هندسة الحاسب"),
-    ("https://www.qu.edu.sa/colleges/coc/departments/coc-4/", "قسم الأمن السيبراني"),
-    ("https://www.qu.edu.sa/colleges/coc/programs/", "برامج الكلية"),
-    ("https://www.qu.edu.sa/about/vision/", "رؤية الجامعة ورسالتها"),
-    ("https://www.qu.edu.sa/about/history/", "تاريخ الجامعة"),
+    ("https://www.qu.edu.sa/about/", "\u0639\u0646 \u0627\u0644\u062c\u0627\u0645\u0639\u0629"),
+    ("https://www.qu.edu.sa/university-president/cv/", "\u0631\u0626\u064a\u0633 \u0627\u0644\u062c\u0627\u0645\u0639\u0629"),
+    ("https://www.qu.edu.sa/colleges/coc/about/", "\u0639\u0646 \u0643\u0644\u064a\u0629 \u0627\u0644\u062d\u0627\u0633\u0628"),
+    ("https://www.qu.edu.sa/colleges/coc/departments/coc-2/", "\u0642\u0633\u0645 \u0639\u0644\u0648\u0645 \u0627\u0644\u062d\u0627\u0633\u0628"),
+    ("https://www.qu.edu.sa/colleges/coc/departments/coc-3/", "\u0642\u0633\u0645 \u062a\u0642\u0646\u064a\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062a"),
+    ("https://www.qu.edu.sa/colleges/coc/departments/coc-1/", "\u0642\u0633\u0645 \u0647\u0646\u062f\u0633\u0629 \u0627\u0644\u062d\u0627\u0633\u0628"),
+    ("https://www.qu.edu.sa/colleges/coc/departments/coc-4/", "\u0642\u0633\u0645 \u0627\u0644\u0623\u0645\u0646 \u0627\u0644\u0633\u064a\u0628\u0631\u0627\u0646\u064a"),
+    ("https://www.qu.edu.sa/colleges/coc/programs/", "\u0628\u0631\u0627\u0645\u062c \u0627\u0644\u0643\u0644\u064a\u0629"),
+    ("https://www.qu.edu.sa/about/vision/", "\u0631\u0624\u064a\u0629 \u0627\u0644\u062c\u0627\u0645\u0639\u0629 \u0648\u0631\u0633\u0627\u0644\u062a\u0647\u0627"),
+    ("https://www.qu.edu.sa/about/history/", "\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u062c\u0627\u0645\u0639\u0629"),
 ]
 
 # ============================================================
-# Global state (initialized by init_index)
+# Global state
 # ============================================================
 emb_model   = None
 faiss_index = None
@@ -93,8 +85,7 @@ groq_client = None
 # ============================================================
 def _ua_headers():
     return {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                      "AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "ar,en;q=0.9",
     }
 
@@ -110,9 +101,9 @@ def download_pdfs_from_urls(url_list, target_folder):
             r.raise_for_status()
             with open(filepath, "wb") as f:
                 f.write(r.content)
-            print(f"  [download] {filename}")
+            print("  [download] " + filename)
         except Exception as e:
-            print(f"  ⚠️  Failed to download {filename}: {e}")
+            print("  Failed to download " + filename + ": " + str(e))
 
 def scrape_qu_pages(target_folder):
     os.makedirs(target_folder, exist_ok=True)
@@ -129,12 +120,12 @@ def scrape_qu_pages(target_folder):
             if len(clean) < 100:
                 continue
             fname = url.replace("https://www.qu.edu.sa/", "").replace("/", "_").strip("_") + ".txt"
+            source_line = "# \u0627\u0644\u0645\u0635\u062f\u0631: " + url
             with open(os.path.join(target_folder, fname), "w", encoding="utf-8") as f:
-                f.write(f"# {label}\n# المصدر: {url}\n\n{clean}")
-            # also register metadata
+                f.write("# " + label + "\n" + source_line + "\n\n" + clean)
             PDF_METADATA.setdefault(fname, {"department": "all", "level": "all", "type": "university_info"})
         except Exception as e:
-            print(f"  ❌ [{label}] فشل: {e}")
+            print("  [" + label + "] failed: " + str(e))
 
 def clean_text(text):
     text = re.sub(r'Page\s+\d+\s+of\s+\d+', '', text, flags=re.IGNORECASE)
@@ -151,7 +142,7 @@ def extract_text_from_pdf(pdf_path):
                 pages.append((text, i + 1))
         return pages
     except Exception as e:
-        print(f"  ⚠️  Could not read {pdf_path}: {e}")
+        print("  Could not read " + pdf_path + ": " + str(e))
         return []
 
 def extract_text_from_txt(txt_path):
@@ -160,7 +151,7 @@ def extract_text_from_txt(txt_path):
             text = clean_text(f.read())
         return [(text, 1)] if text else []
     except Exception as e:
-        print(f"  ⚠️  Could not read {txt_path}: {e}")
+        print("  Could not read " + txt_path + ": " + str(e))
         return []
 
 def chunk_text_smart(text, chunk_size=CHUNK_SIZE, overlap=OVERLAP):
@@ -214,15 +205,14 @@ def load_index():
     return idx, corp
 
 # ============================================================
-# Index initialization (called once at startup)
+# Index initialization
 # ============================================================
 def init_index(force_rebuild: bool = False):
-    """يحمّل الفهرس من القرص إن وُجد، وإلا يبنيه من الصفر."""
     global emb_model, faiss_index, corpus, groq_client
 
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        raise RuntimeError("GROQ_API_KEY غير مضبوط في متغيرات البيئة")
+        raise RuntimeError("GROQ_API_KEY not set in environment variables")
     groq_client = Groq(api_key=api_key)
 
     emb_model = SentenceTransformer(EMBED_MODEL_NAME)
@@ -231,7 +221,7 @@ def init_index(force_rebuild: bool = False):
     corpus_path = os.path.join(INDEX_DIR, "corpus.pkl")
     if not force_rebuild and os.path.exists(index_path) and os.path.exists(corpus_path):
         faiss_index, corpus = load_index()
-        print(f"✅ Index loaded — {len(corpus)} chunks")
+        print("Index loaded - " + str(len(corpus)) + " chunks")
         return
 
     print("=== Building index from scratch ===")
@@ -239,11 +229,11 @@ def init_index(force_rebuild: bool = False):
     download_pdfs_from_urls(PDF_URLS, PDF_FOLDER)
     scrape_qu_pages(PDF_FOLDER)
     corpus = build_corpus(PDF_FOLDER)
-    print(f"  total chunks: {len(corpus)}")
+    print("  total chunks: " + str(len(corpus)))
     embeddings = embed_texts(emb_model, [c["text"] for c in corpus])
     faiss_index = build_faiss_index(embeddings)
     save_index(faiss_index, corpus)
-    print(f"✅ Index ready — {len(corpus)} chunks")
+    print("Index ready - " + str(len(corpus)) + " chunks")
 
 # ============================================================
 # Agents
@@ -260,7 +250,7 @@ def call_llm(prompt, temperature=0.1, max_tokens=500):
 def format_context(results, max_chars=7000):
     parts, used = [], 0
     for i, (ch, score) in enumerate(results, 1):
-        block = f"[{i}] Source: {ch['source']} (page {ch['page']}) | score={score:.3f}\n{ch['text']}\n"
+        block = "[" + str(i) + "] Source: " + ch['source'] + " (page " + str(ch['page']) + ") | score=" + str(round(score, 3)) + "\n" + ch['text'] + "\n"
         if used + len(block) > max_chars:
             break
         parts.append(block)
@@ -268,16 +258,17 @@ def format_context(results, max_chars=7000):
     return "\n---\n".join(parts)
 
 def query_analysis_agent(question, department_override=None, level_override=None):
-    prompt = f"""You are an academic query analysis agent for Qassim University College of Computer.
-Analyze the question and return a JSON with:
-- "intent": one of ["information", "procedure", "requirement", "general"]
-- "topic": one of ["graduation_project", "courses", "internship", "handbook", "advising", "general"]
-- "department": one of ["CS", "IT", "CE", "all"]
-- "level": one of ["bachelor", "master", "all"]
-- "refined_query": a clear English version optimized for document search
-
-QUESTION: {question}
-Return ONLY the JSON. No markdown."""
+    prompt = (
+        "You are an academic query analysis agent for Qassim University College of Computer.\n"
+        "Analyze the question and return a JSON with:\n"
+        '- "intent": one of ["information", "procedure", "requirement", "general"]\n'
+        '- "topic": one of ["graduation_project", "courses", "internship", "handbook", "advising", "general"]\n'
+        '- "department": one of ["CS", "IT", "CE", "all"]\n'
+        '- "level": one of ["bachelor", "master", "all"]\n'
+        '- "refined_query": a clear English version optimized for document search\n\n'
+        "QUESTION: " + question + "\n"
+        "Return ONLY the JSON. No markdown."
+    )
     raw = call_llm(prompt, temperature=0.0, max_tokens=256)
     try:
         info = json.loads(re.sub(r"```json|```", "", raw).strip())
@@ -315,65 +306,59 @@ def response_generation_agent(context, question, query_info, history=None, stude
 
     student_ctx = ""
     if student_info:
-        if student_info.get("name"):       student_ctx += f"Student name: {student_info['name']}. "
-        if student_info.get("department"): student_ctx += f"Student department: {student_info['department']}. "
-        if student_info.get("level"):      student_ctx += f"Student level: {student_info['level']}. "
+        if student_info.get("name"):       student_ctx += "Student name: " + student_info['name'] + ". "
+        if student_info.get("department"): student_ctx += "Student department: " + student_info['department'] + ". "
+        if student_info.get("level"):      student_ctx += "Student level: " + student_info['level'] + ". "
 
     history_ctx = ""
     if history:
         for h in history[-4:]:
-            user_line = "User: " + h.get('q','')
-            logos_line = "لوجوس: " + h.get('a','')
+            user_line = "User: " + h.get('q', '')
+            logos_line = "\u0644\u0648\u062c\u0648\u0633: " + h.get('a', '')
             history_ctx += user_line + "\n" + logos_line + "\n"
 
-    prompt = f"""You are "لوجوس", a friendly and smart academic assistant for the College of Computer at Qassim University.
+    student_section = ("Student context: " + student_ctx + "\n") if student_ctx else ""
+    history_section = ("Recent conversation:\n" + history_ctx + "\n") if history_ctx else ""
 
-Your personality:
-- Warm and conversational, like a helpful senior student
-- If greeted, greet back naturally (don't re-introduce yourself)
-- If question is vague, ask for clarification kindly
-- Use encouraging phrases when appropriate
-- Keep answers concise (3-4 sentences max)
-
-CRITICAL RULES:
-1. Answer ONLY using the CONTEXT below
-2. If the CONTEXT doesn't contain the answer, say (in the SAME language as the QUESTION) that this question is outside the scope of the academic service, and that you can only answer questions related to courses and regulations of the College of Computer at Qassim University
-3. NEVER use your general knowledge if the answer is not in the CONTEXT
-4. Cite sources as [1], [2], etc.
-
-LANGUAGE RULE:
-Detect the language the QUESTION is written in and respond ONLY in that exact language, including rule 2's fallback message.
-Never mix languages in your answer.
-
-{f"Student context: {student_ctx}" if student_ctx else ""}
-{"Recent conversation:\n" + history_ctx if history_ctx else ""}
-
-Intent: {intent}. Topic: {topic}.
-If intent is 'procedure' → list steps clearly.
-If intent is 'requirement' → list requirements clearly.
-
-CONTEXT:
-{context}
-
-QUESTION: {question}
-
-ANSWER:"""
+    prompt = (
+        'You are "\u0644\u0648\u062c\u0648\u0633", a friendly and smart academic assistant for the College of Computer at Qassim University.\n\n'
+        "Your personality:\n"
+        "- Warm and conversational, like a helpful senior student\n"
+        "- If greeted, greet back naturally (don't re-introduce yourself)\n"
+        "- If question is vague, ask for clarification kindly\n"
+        "- Use encouraging phrases when appropriate\n"
+        "- Keep answers concise (3-4 sentences max)\n\n"
+        "CRITICAL RULES:\n"
+        "1. Answer ONLY using the CONTEXT below\n"
+        "2. If the CONTEXT doesn't contain the answer, say (in the SAME language as the QUESTION) that this question is outside the scope of the academic service, and that you can only answer questions related to courses and regulations of the College of Computer at Qassim University\n"
+        "3. NEVER use your general knowledge if the answer is not in the CONTEXT\n"
+        "4. Cite sources as [1], [2], etc.\n\n"
+        "LANGUAGE RULE:\n"
+        "Detect the language the QUESTION is written in and respond ONLY in that exact language, including rule 2's fallback message.\n"
+        "Never mix languages in your answer.\n\n"
+        + student_section
+        + history_section
+        + "Intent: " + intent + ". Topic: " + topic + ".\n"
+        "If intent is 'procedure' - list steps clearly.\n"
+        "If intent is 'requirement' - list requirements clearly.\n\n"
+        "CONTEXT:\n" + context + "\n\n"
+        "QUESTION: " + question + "\n\n"
+        "ANSWER:"
+    )
     return call_llm(prompt, temperature=0.2, max_tokens=500)
 
 def verification_agent(context, question, answer):
-    prompt = f"""You are a verification agent. Check if the ANSWER is fully supported by the CONTEXT.
-Return ONLY a JSON object with:
-- "verified": true if answer is grounded in context, false otherwise
-- "confidence": "high" / "medium" / "low"
-- "note": one-sentence explanation
-Return ONLY JSON. No markdown.
-
-CONTEXT:
-{context}
-
-QUESTION: {question}
-
-ANSWER: {answer}"""
+    prompt = (
+        "You are a verification agent. Check if the ANSWER is fully supported by the CONTEXT.\n"
+        "Return ONLY a JSON object with:\n"
+        '- "verified": true if answer is grounded in context, false otherwise\n'
+        '- "confidence": "high" / "medium" / "low"\n'
+        '- "note": one-sentence explanation\n'
+        "Return ONLY JSON. No markdown.\n\n"
+        "CONTEXT:\n" + context + "\n\n"
+        "QUESTION: " + question + "\n\n"
+        "ANSWER: " + answer
+    )
     raw = call_llm(prompt, temperature=0.0, max_tokens=200)
     try:
         return json.loads(re.sub(r"```json|```", "", raw).strip())
