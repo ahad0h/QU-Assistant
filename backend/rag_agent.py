@@ -322,8 +322,10 @@ def response_generation_agent(context, question, query_info, history=None, stude
     history_ctx = ""
     if history:
         for h in history[-4:]:
-            history_ctx += f"User: {h.get('q','')}\nلوجوس: {h.get('a','')}\n"
-
+            user_line = "User: " + h.get('q','')
+            logos_line = "لوجوس: " + h.get('a','')
+            history_ctx += user_line + "\n" + logos_line + "\n"
+            
     prompt = f"""You are "لوجوس", a friendly and smart academic assistant for the College of Computer at Qassim University.
 
 Your personality:
