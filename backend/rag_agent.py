@@ -325,7 +325,7 @@ def response_generation_agent(context, question, query_info, history=None, stude
             user_line = "User: " + h.get('q','')
             logos_line = "لوجوس: " + h.get('a','')
             history_ctx += user_line + "\n" + logos_line + "\n"
-            
+
     prompt = f"""You are "لوجوس", a friendly and smart academic assistant for the College of Computer at Qassim University.
 
 Your personality:
@@ -346,7 +346,7 @@ Detect the language the QUESTION is written in and respond ONLY in that exact la
 Never mix languages in your answer.
 
 {f"Student context: {student_ctx}" if student_ctx else ""}
-{f"Recent conversation:\n{history_ctx}" if history_ctx else ""}
+{"Recent conversation:\n" + history_ctx if history_ctx else ""}
 
 Intent: {intent}. Topic: {topic}.
 If intent is 'procedure' → list steps clearly.
