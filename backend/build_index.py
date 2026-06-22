@@ -7,7 +7,8 @@ from fastembed import TextEmbedding
 # ============================================================
 # Config
 # ============================================================
-PDF_FOLDER = "./pdfs"
+PDF_DIR = os.path.join(os.path.dirname(__file__), "pdfs")
+os.makedirs(PDF_DIR, exist_ok=True)
 INDEX_DIR  = "./rag_index"
 EMBED_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 CHUNK_SIZE = 900
