@@ -27,11 +27,11 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# CORS — مفتوح لأي واجهة (يمكن تقييده لاحقاً لرابط Render الخاص بالـ frontend)
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+# CORS — مفتوح بالكامل لأي مصدر
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
