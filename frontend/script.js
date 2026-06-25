@@ -100,7 +100,7 @@ function addBotCard(question,d){
     const excerpt=esc(s.excerpt||d.excerpt||synthText).replace(/'/g,"\\'");
     const srcName=esc(s.source).replace(/'/g,"\\'");
     const pageNum=s.page||1;
-    return `<a class="src-tag" href="#" onclick="openSourceViewer('${srcName}','${pageNum}','${excerpt}');return false;">📄 ${esc(name)}${page}${section}</a>`;
+    return `<span class="src-tag">📄 ${esc(name)}${page}${section}</span>`;
   }).join('');
 
   const detailsId='det_'+msgId;
