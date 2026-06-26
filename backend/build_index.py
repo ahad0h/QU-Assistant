@@ -85,7 +85,7 @@ print("Loading embedding model...")
 emb_model = TextEmbedding(EMBED_MODEL_NAME)
 
 print("Building corpus from local files...")
-corpus = build_corpus(PDF_FOLDER)
+corpus = build_corpus(PDF_DIR)
 print("Total chunks: " + str(len(corpus)))
 
 print("Embedding chunks (this may take a few minutes)...")
